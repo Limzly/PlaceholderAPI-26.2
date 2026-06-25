@@ -24,6 +24,16 @@ import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.bstats.bukkit.Metrics;
+import org.bstats.charts.AdvancedPie;
+import org.bstats.charts.SimplePie;
+import org.bukkit.Bukkit;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.PluginCommand;
+import org.bukkit.event.HandlerList;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
+
 import me.clip.placeholderapi.commands.PlaceholderCommandRouter;
 import me.clip.placeholderapi.configuration.PlaceholderAPIConfig;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
@@ -37,31 +47,20 @@ import me.clip.placeholderapi.updatechecker.UpdateChecker;
 import me.clip.placeholderapi.util.ExpansionSafetyCheck;
 import me.clip.placeholderapi.util.Msg;
 import net.kyori.adventure.platform.bukkit.BukkitAudiences;
-import org.bstats.bukkit.Metrics;
-import org.bstats.charts.AdvancedPie;
-import org.bstats.charts.SimplePie;
-import org.bukkit.Bukkit;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.PluginCommand;
-import org.bukkit.event.HandlerList;
-import org.bukkit.event.Listener;
-import org.bukkit.plugin.java.JavaPlugin;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * Yes I have a shit load of work to do...
  *
  * @author Ryan McCarthy
  */
-public final class PlaceholderAPIPlugin extends JavaPlugin {
+    public final class PlaceholderAPIPlugin extends JavaPlugin {
 
-    @NotNull
-    private static final Version VERSION;
-    private static PlaceholderAPIPlugin instance;
+        @NotNull
+        private static final Version VERSION;
+        private static PlaceholderAPIPlugin instance;
 
-    static {
-        final String version = ServerVersionResolver.resolve(
-                Bukkit.getServer().getBukkitVersion()).getLegacyVersion();
+        static {
+        String version = normalizeBukkitVersion(Bukkit.getServer().getBukkitVersion());
 
         boolean isSpigot;
         try {
@@ -72,6 +71,61 @@ public final class PlaceholderAPIPlugin extends JavaPlugin {
         }
 
         VERSION = new Version(version, isSpigot);
+    }
+
+    /**
+     * Normalizes the Bukkit version string into a stable {@code vM_N_Rx} representation
+     * suitable for cross-version comparisons by expansions.
+     *
+     * <p>Handles both the legacy {@code 1.MAJOR.MINOR} format (e.g. {@code 1.21.4}
+     * -> {@code v1_21_R3}, preserving the historic {@code MINOR-1} package revision)
+     * and the new Mojang year-based scheme (e.g. {@code 26.2} -> {@code v26_2_R1}).
+     *
+     * <p>Non-numeric trailing segments such as build metadata ({@code "b31"}) or
+     * qualifiers are discarded so they cannot break parsing.
+     */
+    @NotNull
+    private static String normalizeBukkitVersion(@NotNull final String bukkitVersion) {
+        // Strip everything after the first '-' (e.g. "-R0.1-SNAPSHOT", "-b31-alpha").
+        final String raw = bukkitVersion.split("-")[0];
+
+        // Collect leading-digit-only numeric segments; skip any segment that starts
+        // with a non-digit (e.g. "b31"). This is what makes the parser robust to
+        // build metadata embedded in the version string.
+        final java.util.List<Integer> numeric = new java.util.ArrayList<>();
+        for (final String part : raw.split("\\.")) {
+            if (part.isEmpty()) {
+                continue;
+            }
+            int i = 0;
+            while (i < part.length() && Character.isDigit(part.charAt(i))) {
+                i++;
+            }
+            if (i == 0) {
+                continue; // segment starts non-numeric (e.g. "b31"), discard
+            }
+            try {
+                numeric.add(Integer.parseInt(part.substring(0, i)));
+            } catch (final NumberFormatException ignored) {
+                // ignore malformed segment
+            }
+        }
+
+        if (numeric.isEmpty()) {
+            return "v0_R1";
+        }
+        if (numeric.size() == 1) {
+            return "v" + numeric.get(0) + "_R1";
+        }
+        if (numeric.size() == 2) {
+            // New Mojang scheme: 26.2 -> v26_2_R1
+            return "v" + numeric.get(0) + "_" + numeric.get(1) + "_R1";
+        }
+        // Legacy: 1.MAJOR.MINOR -> v1_MAJOR_R(MINOR-1)
+        // Preserves the exact behaviour expansions relying on the old
+        // CraftBukkit package revision numbering expect.
+        final int minor = numeric.get(2);
+        return "v" + numeric.get(0) + "_" + numeric.get(1) + "_R" + Math.max(0, minor - 1);
     }
 
     @NotNull
@@ -99,7 +153,6 @@ public final class PlaceholderAPIPlugin extends JavaPlugin {
     public static PlaceholderAPIPlugin getInstance() {
         return instance;
     }
-
     /**
      * Get the configurable {@linkplain String} value that should be returned when a boolean is true
      *
