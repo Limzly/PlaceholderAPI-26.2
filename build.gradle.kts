@@ -5,11 +5,10 @@ plugins {
     `maven-publish`
 //    id("com.github.hierynomus.license") version "0.16.1"
     id("com.gradleup.shadow") version "9.3.1"
-    id("me.champeau.jmh") version "0.7.2"
 }
 
 group = "me.clip"
-version = "2.12.3-DEV-${System.getProperty("BUILD_NUMBER")}"
+version = "2.12.2"
 
 description = "An awesome placeholder provider!"
 
@@ -38,21 +37,20 @@ dependencies {
 
     add(paper.compileOnlyConfigurationName, "net.kyori:adventure-platform-bukkit:4.4.1")
     add(paper.compileOnlyConfigurationName, "dev.folia:folia-api:1.21.11-R0.1-SNAPSHOT")
-
+    
     compileOnly("dev.folia:folia-api:1.21.11-R0.1-SNAPSHOT")
     compileOnlyApi("org.jetbrains:annotations:23.0.0")
 
-    jmh("org.openjdk.jmh:jmh-core:1.37")
-    jmh("org.openjdk.jmh:jmh-generator-annprocess:1.37")
-    jmhAnnotationProcessor("org.openjdk.jmh:jmh-generator-annprocess:1.37")
-
-    testImplementation("org.junit.jupiter:junit-jupiter:6.0.2")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("org.openjdk.jmh:jmh-core:1.32")
+    testImplementation("org.openjdk.jmh:jmh-generator-annprocess:1.32")
+    testImplementation("org.junit.jupiter:junit-jupiter-engine:5.8.2")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
 }
 
+
 java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 
     withJavadocJar()
     withSourcesJar()
@@ -76,7 +74,7 @@ tasks {
         classpath = paper.compileClasspath
         destinationDirectory.set(layout.buildDirectory.dir("classes/java/paper"))
         options.encoding = "UTF-8"
-        options.release = 8
+        options.release = 21
     }
 
     val plainJar by registering(Jar::class) {
@@ -116,7 +114,7 @@ tasks {
 
     withType<JavaCompile> {
         options.encoding = "UTF-8"
-        options.release = 8
+        options.release = 21
     }
 
     withType<ShadowJar> {
