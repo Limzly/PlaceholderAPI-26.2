@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "me.clip"
-version = "2.12.2"
+version = "2.12.2-26.2-fix"
 
 description = "An awesome placeholder provider!"
 

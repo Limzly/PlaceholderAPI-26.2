@@ -4,3 +4,6 @@ server/
 build/
 out/
 *.iml
+
+# the DSH project instruction file, generated from .cline\rules by sync-dsh-project-rules.ps1
+AGENTS.local.md
